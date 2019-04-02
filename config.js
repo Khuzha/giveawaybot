@@ -10,7 +10,7 @@ module.exports = {
   },
   buttons: {
     hello: [['Add chan', 'My channels',], ['FAQ']],
-    timeExpired: [['Main menu']],
+    main: [['Main menu']],
     kek: ['google', 'https://google.com']
   }
 }

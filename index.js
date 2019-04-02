@@ -11,6 +11,7 @@ const Extra = require('telegraf/extra')
 const Markup = require('telegraf/markup')
 let db
 
+
 mongo.connect(data.mongoLink, {useNewUrlParser: true}, (err, client) => {
   if (err) {
     return sendError(err)
@@ -36,7 +37,7 @@ bot.use(stage.middleware())
 let start = (ctx) => {
   ctx.reply(
     text.hello, 
-    { reply_markup: { keyboard: buttons.hello, one_time_keyboard: true, resize_keyboard: true }, parse_mode: 'markdown' }
+    { reply_markup: { keyboard: buttons.hello, one_time_keyboard: true, resize_keyboard: true }}
   )
 
   ctx.scene.enter('addOrFaq')
@@ -46,11 +47,11 @@ bot.start((ctx) => {
   start(ctx)
 })
 
-bot.hears('Main menu', (ctx) => {
+bot.hears(buttons.main[0][0], (ctx) => { // == start
   start(ctx)
 })
 
-addOrFaq.hears(buttons.hello[0], async (ctx) => {
+addOrFaq.hears(buttons.hello[0], async (ctx) => { // handling button 'add chan'
   ctx.session.randMess = Math.floor(Math.random() * (999999999 - 100000)) + 100000
   ctx.session.forwAskedTime = (new Date()).getTime()
 
@@ -64,36 +65,45 @@ addOrFaq.hears(buttons.hello[0], async (ctx) => {
 forward.on('text', async (ctx) => {
   ctx.scene.leave('forward')
 
-  if (!ctx.message.forward_from_chat || ctx.message.forward_from_chat.type !== 'channel') {
+  let sessDataDeleter = (ctx) => { // deletes message and time from session
+    delete ctx.session.randMess
+    delete ctx.session.forwAskedTime
+  }
+
+  if (!ctx.message.forward_from_chat || ctx.message.forward_from_chat.type !== 'channel') { // if forward not from channel
     return ctx.reply(
       text.frwdAgain, 
       { reply_markup: { inline_keyboard: [[{ text: 'How to do it', url: 'google.com' }]] } }
     )
   }
 
-  if ((new Date()).getTime() - ctx.session.forwAskedTime > 100000) {
+  if ((new Date()).getTime() - ctx.session.forwAskedTime > 100000) { // if time expired
+    sessDataDeleter(ctx)
     return ctx.reply(
       text.timeExpired,
-      { reply_markup: { keyboard: buttons.timeExpired, one_time_keyboard: true, resize_keyboard: true }, parse_mode: 'markdown' }
+      { reply_markup: { keyboard: buttons.main, one_time_keyboard: true, resize_keyboard: true }}
     )
   }
 
-  if (+ctx.message.text !== ctx.session.randMess) {
+  if (+ctx.message.text !== ctx.session.randMess) { // if messages don`t equal
+    sessDataDeleter(ctx)
     return ctx.reply(
       text.notEqual 
     )
   }
 
   let rights = await bot.telegram.getChatMember(ctx.message.forward_from_chat.id, data.botId)
-  if (rights.status !== 'administrator' && !rights.can_post_messages && !rights.can_edit_messages) {
+  if (rights.status !== 'administrator' && !rights.can_post_messages && !rights.can_edit_messages) { // if there are no enough rights
     return ctx.reply(
       text.rights,
       { reply_markup: { inline_keyboard: [[{ text: 'How to do it', url: 'google.com' }]] } }
     )
   }
 
+  sessDataDeleter(ctx)
   ctx.reply(
-    text.addedChan
+    text.addedChan,
+    { reply_markup: { keyboard: buttons.main, one_time_keyboard: true, resize_keyboard: true }}
   )
 })
 
