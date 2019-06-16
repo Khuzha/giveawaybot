@@ -1,0 +1,15 @@
+hello: 'Hello! What do you want to do?'
+getText: 'Send me text of your post'
+getButton: 'Send me a text for the button (not more symbols then 15)'
+check: 'Check the post please:'
+isCorrect: 'Is this post correct?'
+leerButton: 'To use this button share it in the channel or other chats'
+ready: 'Your post is ready. Type in your channel <code>@GiWayBot ${token}</code> to share it (copy this)'
+
+
+buttons: 
+  generate: 'Generate new post'
+  myPosts: 'See my posts'
+  correct: '✅ Correct'
+  notCorrect: '❌ Try again'
+  share: '⤴️ Share'

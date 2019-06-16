@@ -1,0 +1,28 @@
+{
+  "name": "giveawaybot",
+  "version": "1.0.0",
+  "description": "giveawaybot",
+  "main": "index.js",
+  "scripts": {
+    "test": "nodemon bot.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Khuzha/giveawaybot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Khuzha/giveawaybot/issues"
+  },
+  "homepage": "https://github.com/Khuzha/giveawaybot#readme",
+  "dependencies": {
+    "mongodb": "^3.2.2",
+    "nodemon": "^1.18.10",
+    "path": "^0.12.7",
+    "randomstring": "^1.1.5",
+    "telegraf": "^3.28.0",
+    "telegraf-i18n": "^6.5.0"
+  }
+}

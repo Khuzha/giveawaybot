@@ -1,13 +1,14 @@
 const Telgegraf = require('telegraf')
+const TelegrafI18n = require('telegraf-i18n')
 const mongo = require('mongodb')
 const randomstring = require('randomstring')
+const path = require('path')
 const data = require('./data')
 const Extra = require('telegraf/extra')
 const Markup = require('telegraf/markup')
 const session = require('telegraf/session')
 const Stage = require('telegraf/stage')
-const Scene = require('telegraf/scenes/base')
-const stage = new Stage()
+const superWizard = require('./wizard')
 const { leave } = Stage
 const bot = new Telgegraf(data.token)
 let db
@@ -22,75 +23,79 @@ mongo.connect(data.mongoLink, {useNewUrlParser: true}, (err, client) => {
   bot.startPolling()
 })
 
-
-const newPost = new Scene('newPost')
-stage.register(newPost)
-const buttonText = new Scene('buttonText')
-stage.register(buttonText)
-const check = new Scene('check')
-stage.register(check)
+const i18n = new TelegrafI18n({
+  defaultLanguage: 'en',
+  allowMissing: false, 
+  directory: path.resolve(__dirname, 'locales')
+})
 
 
+const stage = new Stage()
+stage.register(superWizard)
+
+bot.use(i18n.middleware())
 bot.use(session())
 bot.use(stage.middleware())
 
-bot.start((ctx) => {
-  ctx.reply(
-    'Hello! What do you want to do?',
+
+bot.start(({ i18n, replyWithHTML }) => {
+  replyWithHTML(
+    i18n.t('hello'),
     Extra
       .markup(
-        Markup.keyboard(['Generate new post', 'See my posts'], { columns: 1 })
+        Markup.keyboard([i18n.t('buttons.generate'), i18n.t('buttons.myPosts')], { columns: 1 })
         .resize()
         .oneTime()
       )
     )
 })
 
-bot.hears('Generate new post', (ctx) => {
-  ctx.scene.enter('newPost')
+bot.hears(TelegrafI18n.match('buttons.generate'), (ctx) => {
+  ctx.scene.enter('generating')
 })
 
-newPost.enter((ctx) => ctx.reply('Send me text of your post'))
+// newPost.enter(({ i18n, replyWithHTML }) => replyWithHTML(i18n.t('sendText')))
 
-newPost.on('text', async (ctx) => {
-  ctx.session.postText = ctx.message.text
+// newPost.on('text', async (ctx) => {
+//   ctx.session.postText = ctx.message.text
 
-  ctx.scene.enter('buttonText')
-})
+//   ctx.scene.enter('buttonText')
+// })
 
-buttonText.enter((ctx) => ctx.reply('Send me a text for the button (not more symbols then 15)'))
+// buttonText.enter((ctx) => ctx.reply('Send me a text for the button (not more symbols then 15)'))
 
-buttonText.on('text', (ctx) => {
-  if (ctx.message.text.length > 15) {
-    return ctx.reply('Send me a text for the button (not more symbols then 15)')
-  }
+// buttonText.on('text', (ctx) => {
+//   if (ctx.message.text.length > 15) {
+//     return ctx.reply('Send me a text for the button (not more symbols then 15)')
+//   }
 
-  ctx.session.buttonText = ctx.message.text
-  ctx.scene.enter('check')
-})
+//   ctx.session.buttonText = ctx.message.text
+//   ctx.scene.enter('check')
+// })
 
-check.enter(async (ctx) => {
-  await ctx.reply('Check the post')
-  await ctx.reply(
-    ctx.session.postText,
-    Extra
-      .markup(Markup.inlineKeyboard([
-        [Markup.callbackButton(ctx.session.buttonText, 'leer')]
-      ]))
-  )
+// check.enter(async (ctx) => {
+//   await ctx.reply('Check the post')
+//   await ctx.reply(
+//     ctx.session.postText,
+//     Extra
+//       .markup(Markup.inlineKeyboard([
+//         [Markup.callbackButton(ctx.session.buttonText, 'leer')]
+//       ]))
+//   )
   
-  ctx.reply(
-    'Is this post correct?',
-    Extra
-      .markup(Markup.inlineKeyboard([
-        [Markup.callbackButton('✅ Correct', 'correct'), Markup.callbackButton('❌ Try again', 'again')]
-      ]))
-  )
-})
+//   ctx.reply(
+//     'Is this post correct?',
+//     Extra
+//       .markup(Markup.inlineKeyboard([
+//         [Markup.callbackButton('✅ Correct', 'correct'), Markup.callbackButton('❌ Try again', 'again')]
+//       ]))
+//   )
+// })
 
-bot.action('correct', async (ctx) => {
-  ctx.answerCbQuery()
-
+bot.action('correct', async ({ i18n, answerCbQuery, replyWithHTML, session }) => {
+  answerCbQuery()
+    .catch((err) => { return })
+    
   let tokenExist = true
   let token
   
@@ -100,22 +105,37 @@ bot.action('correct', async (ctx) => {
     dbTokens.length === 0 ? tokenExist = false : false
   }
   
-  ctx.reply(
-    `Your post is ready. Type in your channel <code>@GiWayBot ${token}</code> to share it.`,
+  replyWithHTML(
+    i18n.t('ready', { token: token }),
     Extra 
       .markup(Markup.inlineKeyboard([
-        [Markup.switchToChatButton('⤴️ Share', `@GiWayBot ${token}`)]
+        [Markup.switchToChatButton(i18n.t('buttons.share'), token)]
       ]))
       .HTML()
   )
 
   db.collection('allPosts').insertOne({
     token: token,
-    postText: ctx.session.postText,
-    buttonText: ctx.session.buttonText,
+    postText: session.postText,
+    buttonText: session.buttonText,
     members: []
   })
 })
+
+bot.action('again', ({ wizard }) => {
+  ctx.answerCbQuery()
+  return wizard.back()
+})
+
+bot.action('leer', ({ i18n, answerCbQuery }) => {
+  return answerCbQuery(i18n.t('leerButton'))
+    .catch((err) => { return })
+})
+
+bot.action(/part_*/, async (ctx) => {
+  ctx.answerCbQuery('lol', true)
+})
+
 
 bot.on('inline_query', async (ctx) => {
   if (ctx.inlineQuery.query.length !== 16) {
@@ -124,7 +144,7 @@ bot.on('inline_query', async (ctx) => {
 
   const dbData = await db.collection('allPosts').find({token: ctx.inlineQuery.query}).toArray()
   if (dbData.length === 0) {
-    
+    return
   }
 
   const post = [{
@@ -141,13 +161,4 @@ bot.on('inline_query', async (ctx) => {
   }]
 
   ctx.answerInlineQuery(post)
-})
-
-bot.action(/part_*/, async (ctx) => {
-  ctx.answerCbQuery('Иди на хуй', true)
-})
-
-bot.action('again', (ctx) => {
-  ctx.answerCbQuery()
-  ctx.scene.enter('newPost')
 })
