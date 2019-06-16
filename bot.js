@@ -54,44 +54,6 @@ bot.hears(TelegrafI18n.match('buttons.generate'), (ctx) => {
   ctx.scene.enter('generating')
 })
 
-// newPost.enter(({ i18n, replyWithHTML }) => replyWithHTML(i18n.t('sendText')))
-
-// newPost.on('text', async (ctx) => {
-//   ctx.session.postText = ctx.message.text
-
-//   ctx.scene.enter('buttonText')
-// })
-
-// buttonText.enter((ctx) => ctx.reply('Send me a text for the button (not more symbols then 15)'))
-
-// buttonText.on('text', (ctx) => {
-//   if (ctx.message.text.length > 15) {
-//     return ctx.reply('Send me a text for the button (not more symbols then 15)')
-//   }
-
-//   ctx.session.buttonText = ctx.message.text
-//   ctx.scene.enter('check')
-// })
-
-// check.enter(async (ctx) => {
-//   await ctx.reply('Check the post')
-//   await ctx.reply(
-//     ctx.session.postText,
-//     Extra
-//       .markup(Markup.inlineKeyboard([
-//         [Markup.callbackButton(ctx.session.buttonText, 'leer')]
-//       ]))
-//   )
-  
-//   ctx.reply(
-//     'Is this post correct?',
-//     Extra
-//       .markup(Markup.inlineKeyboard([
-//         [Markup.callbackButton('✅ Correct', 'correct'), Markup.callbackButton('❌ Try again', 'again')]
-//       ]))
-//   )
-// })
-
 bot.action('correct', async ({ i18n, answerCbQuery, replyWithHTML, session }) => {
   answerCbQuery()
     .catch((err) => { return })
